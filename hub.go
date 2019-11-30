@@ -63,6 +63,7 @@ func startRTC(ws *websocket.Conn, data Session, conf Config) error {
 		})
 
 		pc.OnDataChannel(func(dc *webrtc.DataChannel) {
+
 			if dc.Label() == "SSH" {
 				ssh, err := net.Dial("tcp", fmt.Sprintf("%s:%d", conf.Host, conf.Port))
 				if err != nil {
@@ -132,34 +133,37 @@ func DataChannel(dc *webrtc.DataChannel, ssh net.Conn) {
 
 func VideoStreamChannel(dc *webrtc.DataChannel) {
 
+	channelOpen := true
 	dc.OnOpen(func() {
-
-		theDataChannel := make(chan []byte)
-		TheReader.AddListener("newdata", theDataChannel)
+		TheDataChannel := make(chan []byte)
+		TheReader.AddListener("newdata", TheDataChannel)
 
 		var err error
-		for {
+		for channelOpen {
 
-			msg := <-theDataChannel
+			msg := <-TheDataChannel
 
 			err = dc.Send(msg)
 
 			if err != nil {
 				// log.Fatalf("Write error: %s\n", err)
-				// log.Printf("Write error: %s ", err)
+				log.Printf("Write error: %s ", err)
 				// dc.Close()
 				// closeChannelCB()
 
-				TheReader.RemoveListener("newdata", theDataChannel)
+				TheReader.RemoveListener("newdata", TheDataChannel)
 
 			}
 		}
+
+		defer TheReader.RemoveListener("newdata", TheDataChannel)
 
 	})
 
 	dc.OnMessage(func(msg webrtc.DataChannelMessage) {
 		log.Println(string(msg.Data))
 		if string(msg.Data) == "closeSession" {
+			channelOpen = false
 			dc.Close()
 		}
 	})
@@ -167,5 +171,12 @@ func VideoStreamChannel(dc *webrtc.DataChannel) {
 	dc.OnClose(func() {
 
 		log.Printf("Close Video Channel")
+	})
+
+	dc.OnError(func(err error) {
+		log.Printf("Datachannel Error %s \n", err)
+		dc.Close()
+		channelOpen = false
+
 	})
 }

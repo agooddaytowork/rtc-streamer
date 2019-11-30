@@ -170,7 +170,7 @@ func main() {
 		nBytes, nChunks := int64(0), int64(0)
 		r := bufio.NewReader(os.Stdin)
 		// buf := make([]byte, 0, 64*1024)
-		buf := make([]byte, 0, 512*1024)
+		buf := make([]byte, 0, 63*1024)
 
 		for {
 			n, err := r.Read(buf[:cap(buf)])
@@ -195,26 +195,6 @@ func main() {
 			// log.Println(len(buf))
 		}
 
-		// for {
-
-		// 	nBytes, err = os.Stdin.Read(buf)
-		// 	if err != nil {
-		// 		if err != io.EOF {
-		// 			log.Printf("Read error: %s\n", err)
-		// 		}
-		// 		break
-		// 	}
-
-		// 	TheReader.Emit("newdata", buf[0:nBytes])
-		// err = dc.Send(buf[0:nBytes])
-		// if err != nil {
-		// 	// log.Fatalf("Write error: %s\n", err)
-
-		// 	log.Printf("Write error: %s ", err)
-
-		// }
-
-		// }
 		log.Printf("Exit reading loop")
 
 		defer fmt.Println("thread end")
