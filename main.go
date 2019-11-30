@@ -15,6 +15,8 @@ import (
 	ini "github.com/pierrec/go-ini"
 )
 
+var theBuffer []byte
+
 type Config struct {
 	Uuid string `ini:"uuid,identify"`
 	Host string `ini:"host,ssh"`
@@ -66,6 +68,10 @@ func reconnect(query string) *websocket.Conn {
 	}()
 
 	return ws
+}
+
+func init() {
+	theBuffer = make([]byte, 0, 8*1024)
 }
 
 func main() {

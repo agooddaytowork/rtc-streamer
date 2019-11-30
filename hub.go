@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"log"
@@ -58,6 +57,10 @@ func startRTC(ws *websocket.Conn, data Session, conf Config) error {
 
 		pc.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) {
 			log.Println("ICE Connection State has changed:", state.String())
+
+			if state.String() == "failed" {
+				pc.Close()
+			}
 		})
 
 		pc.OnDataChannel(func(dc *webrtc.DataChannel) {
@@ -126,39 +129,62 @@ func DataChannel(dc *webrtc.DataChannel, ssh net.Conn) {
 
 func VideoStreamChannel(dc *webrtc.DataChannel) {
 
+	isClose := false
 	dc.OnOpen(func() {
-		// err := dc.SendText("OPEN_RTC_CHANNEL")
-		// if err != nil {
-		// 	log.Println("write data error:", err)
+		// nBytes, nChunks := int64(0), int64(0)
+		// r := bufio.NewReader(os.Stdin)
+		// buf := make([]byte, 0, 8*1024)
+
+		// for {
+		// 	n, err := r.Read(buf[:cap(buf)])
+		// 	buf = buf[:n]
+		// 	if n == 0 {
+		// 		if err == nil {
+		// 			continue
+		// 		}
+		// 		if err == io.EOF {
+		// 			break
+		// 		}
+		// 		log.Fatal(err)
+		// 	}
+		// 	nChunks++
+		// 	nBytes += int64(len(buf))
+		// 	// process buf
+		// 	if err != nil && err != io.EOF {
+		// 		log.Fatal(err)
+		// 	}
+
+		// 	dc.Send(buf)
+		// 	// log.Println(len(buf))
 		// }
-		// io.Copy(&Wrap{dc}, os.Stdin)
-		nBytes, nChunks := int64(0), int64(0)
-		r := bufio.NewReader(os.Stdin)
-		// buf := make([]byte, 0, 64*1024)
-		buf := make([]byte, 0, 1024)
 
-		for {
-			n, err := r.Read(buf[:cap(buf)])
-			buf = buf[:n]
-			if n == 0 {
-				if err == nil {
-					continue
+		buf := make([]byte, 1024)
+
+		for !isClose {
+			var nBytes int
+			var err error
+			nBytes, err = os.Stdin.Read(buf)
+			if err != nil {
+				if err != io.EOF {
+					log.Printf("Read error: %s\n", err)
 				}
-				if err == io.EOF {
-					break
-				}
-				log.Fatal(err)
-			}
-			nChunks++
-			nBytes += int64(len(buf))
-			// process buf
-			if err != nil && err != io.EOF {
-				log.Fatal(err)
+				break
 			}
 
-			dc.Send(buf)
-			// log.Println(len(buf))
+			err = dc.Send(buf[0:nBytes])
+			if err != nil {
+				// log.Fatalf("Write error: %s\n", err)
+
+				dc.Close()
+				log.Printf("Write error: %s ", err)
+
+			}
+
 		}
+		log.Printf("Exit reading loop")
+
+		defer fmt.Println("thread end")
+
 		// log.Println("Bytes:", nBytes, "Chunks:", nChunks)
 	})
 
@@ -167,6 +193,7 @@ func VideoStreamChannel(dc *webrtc.DataChannel) {
 	})
 
 	dc.OnClose(func() {
+		isClose = true
 		log.Printf("Close Video Channel")
 	})
 }
