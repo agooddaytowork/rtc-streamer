@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"os"
 
 	"github.com/gorilla/websocket"
 	"github.com/pion/webrtc/v2"
@@ -59,7 +58,7 @@ func startRTC(ws *websocket.Conn, data Session, conf Config) error {
 			log.Println("ICE Connection State has changed:", state.String())
 
 			if state.String() == "failed" {
-				pc.Close()
+				// pc.Close()
 			}
 		})
 
@@ -75,7 +74,12 @@ func startRTC(ws *websocket.Conn, data Session, conf Config) error {
 				}
 			} else if dc.Label() == "videostream" {
 				log.Println("Connect To Video stream")
-				VideoStreamChannel(dc)
+				VideoStreamChannel(dc, func() {
+
+					log.Println("close data channel callback ")
+					pc.Close()
+
+				})
 			}
 		})
 
@@ -127,65 +131,31 @@ func DataChannel(dc *webrtc.DataChannel, ssh net.Conn) {
 	})
 }
 
-func VideoStreamChannel(dc *webrtc.DataChannel) {
+func VideoStreamChannel(dc *webrtc.DataChannel, closeChannelCB func()) {
 
-	isClose := false
 	dc.OnOpen(func() {
-		// nBytes, nChunks := int64(0), int64(0)
-		// r := bufio.NewReader(os.Stdin)
-		// buf := make([]byte, 0, 8*1024)
 
-		// for {
-		// 	n, err := r.Read(buf[:cap(buf)])
-		// 	buf = buf[:n]
-		// 	if n == 0 {
-		// 		if err == nil {
-		// 			continue
-		// 		}
-		// 		if err == io.EOF {
-		// 			break
-		// 		}
-		// 		log.Fatal(err)
-		// 	}
-		// 	nChunks++
-		// 	nBytes += int64(len(buf))
-		// 	// process buf
-		// 	if err != nil && err != io.EOF {
-		// 		log.Fatal(err)
-		// 	}
+		theDataChannel := make(chan []byte)
+		TheReader.AddListener("newdata", theDataChannel)
 
-		// 	dc.Send(buf)
-		// 	// log.Println(len(buf))
-		// }
+		var err error
+		for {
 
-		buf := make([]byte, 1024)
+			msg := <-theDataChannel
 
-		for !isClose {
-			var nBytes int
-			var err error
-			nBytes, err = os.Stdin.Read(buf)
-			if err != nil {
-				if err != io.EOF {
-					log.Printf("Read error: %s\n", err)
-				}
-				break
-			}
+			err = dc.Send(msg)
 
-			err = dc.Send(buf[0:nBytes])
 			if err != nil {
 				// log.Fatalf("Write error: %s\n", err)
+				// log.Printf("Write error: %s ", err)
+				// dc.Close()
+				// closeChannelCB()
 
-				dc.Close()
-				log.Printf("Write error: %s ", err)
+				TheReader.RemoveListener("newdata", theDataChannel)
 
 			}
-
 		}
-		log.Printf("Exit reading loop")
 
-		defer fmt.Println("thread end")
-
-		// log.Println("Bytes:", nBytes, "Chunks:", nChunks)
 	})
 
 	dc.OnMessage(func(msg webrtc.DataChannelMessage) {
@@ -193,7 +163,7 @@ func VideoStreamChannel(dc *webrtc.DataChannel) {
 	})
 
 	dc.OnClose(func() {
-		isClose = true
+
 		log.Printf("Close Video Channel")
 	})
 }

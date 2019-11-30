@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/url"
 	"os"
@@ -28,6 +29,8 @@ type Session struct {
 	Sdp   string `json:"sdp"`
 	Error string `json:"error"`
 }
+
+var TheReader ReadStream
 
 func reconnect(query string) *websocket.Conn {
 	var u url.URL
@@ -163,6 +166,36 @@ func main() {
 				os.Exit(0)
 			}
 		}
+	}()
+
+	go func() {
+		fmt.Println("Reading thread start ")
+		buf := make([]byte, 256*1024)
+		var err error
+		var nBytes int
+		for {
+
+			nBytes, err = os.Stdin.Read(buf)
+			if err != nil {
+				if err != io.EOF {
+					log.Printf("Read error: %s\n", err)
+				}
+				break
+			}
+
+			TheReader.Emit("newdata", buf[0:nBytes])
+			// err = dc.Send(buf[0:nBytes])
+			// if err != nil {
+			// 	// log.Fatalf("Write error: %s\n", err)
+
+			// 	log.Printf("Write error: %s ", err)
+
+			// }
+
+		}
+		log.Printf("Exit reading loop")
+
+		defer fmt.Println("thread end")
 	}()
 
 	for {
