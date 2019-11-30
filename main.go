@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"bufio"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	ini "github.com/pierrec/go-ini"
@@ -164,29 +165,56 @@ func main() {
 
 	go func() {
 		fmt.Println("Reading thread start ")
-		buf := make([]byte, 256*1024)
-		var err error
-		var nBytes int
-		for {
+		// var err error
 
-			nBytes, err = os.Stdin.Read(buf)
-			if err != nil {
-				if err != io.EOF {
-					log.Printf("Read error: %s\n", err)
+		nBytes, nChunks := int64(0), int64(0)
+		r := bufio.NewReader(os.Stdin)
+		// buf := make([]byte, 0, 64*1024)
+		buf := make([]byte, 0, 128*1024)
+
+		for {
+			n, err := r.Read(buf[:cap(buf)])
+			buf = buf[:n]
+			if n == 0 {
+				if err == nil {
+					continue
 				}
-				break
+				if err == io.EOF {
+					break
+				}
+				log.Fatal(err)
+			}
+			nChunks++
+			nBytes += int64(len(buf))
+			// process buf
+			if err != nil && err != io.EOF {
+				log.Fatal(err)
 			}
 
-			TheReader.Emit("newdata", buf[0:nBytes])
-			// err = dc.Send(buf[0:nBytes])
-			// if err != nil {
-			// 	// log.Fatalf("Write error: %s\n", err)
-
-			// 	log.Printf("Write error: %s ", err)
-
-			// }
-
+			TheReader.Emit("newdata", buf)
+			// log.Println(len(buf))
 		}
+
+		// for {
+
+		// 	nBytes, err = os.Stdin.Read(buf)
+		// 	if err != nil {
+		// 		if err != io.EOF {
+		// 			log.Printf("Read error: %s\n", err)
+		// 		}
+		// 		break
+		// 	}
+
+		// 	TheReader.Emit("newdata", buf[0:nBytes])
+		// err = dc.Send(buf[0:nBytes])
+		// if err != nil {
+		// 	// log.Fatalf("Write error: %s\n", err)
+
+		// 	log.Printf("Write error: %s ", err)
+
+		// }
+
+		// }
 		log.Printf("Exit reading loop")
 
 		defer fmt.Println("thread end")
@@ -196,7 +224,7 @@ func main() {
 		query := "localUser=" + conf.Uuid
 		ws = reconnect(query)
 		hub(ws, conf)
-		time.Sleep(10 * time.Second)
+		time.Sleep(30 * time.Second)
 		log.Println("Reconnect with the signaling server")
 	}
 
