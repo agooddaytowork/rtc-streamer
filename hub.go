@@ -74,12 +74,7 @@ func startRTC(ws *websocket.Conn, data Session, conf Config) error {
 				}
 			} else if dc.Label() == "videostream" {
 				log.Println("Connect To Video stream")
-				VideoStreamChannel(dc, func() {
-
-					log.Println("close data channel callback ")
-					pc.Close()
-
-				})
+				VideoStreamChannel(dc)
 			}
 		})
 
@@ -107,6 +102,10 @@ func startRTC(ws *websocket.Conn, data Session, conf Config) error {
 			return err
 		}
 
+	case "endsession":
+		fmt.Println("Received end session message")
+		pc.Close()
+
 	default:
 		return fmt.Errorf("unknown signaling message %v", data.Type)
 	}
@@ -131,7 +130,7 @@ func DataChannel(dc *webrtc.DataChannel, ssh net.Conn) {
 	})
 }
 
-func VideoStreamChannel(dc *webrtc.DataChannel, closeChannelCB func()) {
+func VideoStreamChannel(dc *webrtc.DataChannel) {
 
 	dc.OnOpen(func() {
 
@@ -159,7 +158,10 @@ func VideoStreamChannel(dc *webrtc.DataChannel, closeChannelCB func()) {
 	})
 
 	dc.OnMessage(func(msg webrtc.DataChannelMessage) {
-		log.Println(msg.Data)
+		log.Println(string(msg.Data))
+		if string(msg.Data) == "closeSession" {
+			dc.Close()
+		}
 	})
 
 	dc.OnClose(func() {

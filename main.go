@@ -16,8 +16,6 @@ import (
 	ini "github.com/pierrec/go-ini"
 )
 
-var theBuffer []byte
-
 type Config struct {
 	Uuid string `ini:"uuid,identify"`
 	Host string `ini:"host,ssh"`
@@ -71,10 +69,6 @@ func reconnect(query string) *websocket.Conn {
 	}()
 
 	return ws
-}
-
-func init() {
-	theBuffer = make([]byte, 0, 8*1024)
 }
 
 func main() {
@@ -202,7 +196,7 @@ func main() {
 		query := "localUser=" + conf.Uuid
 		ws = reconnect(query)
 		hub(ws, conf)
-		time.Sleep(30 * time.Second)
+		time.Sleep(10 * time.Second)
 		log.Println("Reconnect with the signaling server")
 	}
 
