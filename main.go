@@ -170,7 +170,7 @@ func main() {
 		nBytes, nChunks := int64(0), int64(0)
 		r := bufio.NewReader(os.Stdin)
 		// buf := make([]byte, 0, 64*1024)
-		buf := make([]byte, 0, 128*1024)
+		buf := make([]byte, 0, 512*1024)
 
 		for {
 			n, err := r.Read(buf[:cap(buf)])
