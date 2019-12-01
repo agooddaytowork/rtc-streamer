@@ -170,7 +170,7 @@ func main() {
 		nBytes, nChunks := int64(0), int64(0)
 		r := bufio.NewReader(os.Stdin)
 		// buf := make([]byte, 0, 64*1024)
-		buf := make([]byte, 0, 63*1024)
+		buf := make([]byte, 0, 1024*1024)
 
 		for {
 			n, err := r.Read(buf[:cap(buf)])
@@ -191,7 +191,25 @@ func main() {
 				log.Fatal(err)
 			}
 
-			TheReader.Emit("newdata", buf)
+			// log.Println("buf len &n"   )
+			if n >= 65000 {
+
+				for i := 0; i <= n; i = i + 65001 {
+
+					if n-i >= 65000 {
+
+						TheReader.Emit("newData", buf[i:i+65000])
+					} else {
+						TheReader.Emit("newData", buf[i:n])
+
+					}
+
+				}
+
+			} else {
+				TheReader.Emit("newdata", buf)
+			}
+
 			// log.Println(len(buf))
 		}
 

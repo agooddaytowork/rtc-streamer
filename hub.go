@@ -135,13 +135,14 @@ func VideoStreamChannel(dc *webrtc.DataChannel) {
 
 	channelOpen := true
 	dc.OnOpen(func() {
-		TheDataChannel := make(chan []byte)
-		TheReader.AddListener("newdata", TheDataChannel)
+		theDataChannel := make(chan []byte)
+		TheReader.AddListener("newdata", theDataChannel)
 
 		var err error
+		var msg []byte
 		for channelOpen {
 
-			msg := <-TheDataChannel
+			msg = <-theDataChannel
 
 			err = dc.Send(msg)
 
@@ -151,12 +152,12 @@ func VideoStreamChannel(dc *webrtc.DataChannel) {
 				// dc.Close()
 				// closeChannelCB()
 
-				TheReader.RemoveListener("newdata", TheDataChannel)
+				TheReader.RemoveListener("newdata", theDataChannel)
 
 			}
 		}
 
-		defer TheReader.RemoveListener("newdata", TheDataChannel)
+		defer TheReader.RemoveListener("newdata", theDataChannel)
 
 	})
 
