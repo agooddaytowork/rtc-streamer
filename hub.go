@@ -126,6 +126,7 @@ func DataChannel(dc *webrtc.DataChannel, ssh net.Conn) {
 
 func VideoStreamChannel(dc *webrtc.DataChannel) {
 
+	isOpen := true
 	dc.OnOpen(func() {
 		// err := dc.SendText("OPEN_RTC_CHANNEL")
 		// if err != nil {
@@ -135,9 +136,9 @@ func VideoStreamChannel(dc *webrtc.DataChannel) {
 		nBytes, nChunks := int64(0), int64(0)
 		r := bufio.NewReader(os.Stdin)
 		// buf := make([]byte, 0, 64*1024)
-		buf := make([]byte, 0, 1024)
+		buf := make([]byte, 0, 32*1024)
 
-		for {
+		for isOpen {
 			n, err := r.Read(buf[:cap(buf)])
 			buf = buf[:n]
 			if n == 0 {
@@ -164,9 +165,27 @@ func VideoStreamChannel(dc *webrtc.DataChannel) {
 
 	dc.OnMessage(func(msg webrtc.DataChannelMessage) {
 		log.Println(msg.Data)
+
+		if string(msg.Data) == "closeSession" {
+
+			err := dc.Close()
+			if err != nil {
+				panic(err)
+			}
+		}
 	})
 
 	dc.OnClose(func() {
 		log.Printf("Close Video Channel")
+		isOpen = false
+	})
+
+	dc.OnError(func(err error) {
+		log.Printf("Data channel error: %s", err)
+		err = dc.Close()
+		if err != nil {
+			panic(err)
+		}
+		isOpen = false
 	})
 }
