@@ -26,7 +26,7 @@ var (
 				},
 			},
 		},
-		// ICETransportPolicy: webrtc.ICETransportPolicyRelay,
+		ICETransportPolicy: webrtc.ICETransportPolicyRelay,
 	}
 	defaultHost = "127.0.0.1"
 	defaultPort = 22

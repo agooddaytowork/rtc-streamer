@@ -58,6 +58,7 @@ func startRTC(ws *websocket.Conn, data Session, conf Config) error {
 
 		pc.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) {
 			log.Println("ICE Connection State has changed:", state.String())
+
 		})
 
 		pc.OnDataChannel(func(dc *webrtc.DataChannel) {
@@ -107,6 +108,7 @@ func startRTC(ws *websocket.Conn, data Session, conf Config) error {
 }
 
 func DataChannel(dc *webrtc.DataChannel, ssh net.Conn) {
+
 	dc.OnOpen(func() {
 
 		err := dc.SendText("OPEN_RTC_CHANNEL")
@@ -127,6 +129,7 @@ func DataChannel(dc *webrtc.DataChannel, ssh net.Conn) {
 func VideoStreamChannel(dc *webrtc.DataChannel) {
 
 	isOpen := true
+
 	dc.OnOpen(func() {
 		// err := dc.SendText("OPEN_RTC_CHANNEL")
 		// if err != nil {
@@ -157,7 +160,14 @@ func VideoStreamChannel(dc *webrtc.DataChannel) {
 				log.Fatal(err)
 			}
 
-			dc.Send(buf)
+			err = dc.Send(buf)
+
+			if err != nil {
+				log.Printf("Send error: %s", err)
+
+				dc.Close()
+			}
+
 			// log.Println(len(buf))
 		}
 		// log.Println("Bytes:", nBytes, "Chunks:", nChunks)
